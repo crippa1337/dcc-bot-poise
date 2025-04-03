@@ -17,8 +17,8 @@ pub async fn age(
 /// Collect a daily reward of tokens
 #[poise::command(slash_command)]
 pub async fn daily(ctx: Context<'_>) -> Result<(), Error> {
-    // Fetching user entry, adding tokens (with a touch of **random**)
-    let (reward, current_val) = {
+    // Fetching user entry, adding tokens - similarily done in other cmds
+    let (current_val, reward) = {
         let uid = ctx.author().id.to_string();
         let mut hash = ctx.data().user_hash.lock().unwrap();
         let current_val = hash.entry(uid).or_default();
@@ -35,20 +35,30 @@ pub async fn daily(ctx: Context<'_>) -> Result<(), Error> {
 
 /// Flip a coin to wager tokens
 #[poise::command(slash_command)]
-pub async fn coinflip(ctx: Context<'_>) -> Result<(), Error> {
-    let (reward, current_val) = {
+pub async fn coinflip(
+    ctx: Context<'_>,
+    #[description = "Token wager"] wager: u64,
+) -> Result<(), Error> {
+    let response = {
         let uid = ctx.author().id.to_string();
         let mut hash = ctx.data().user_hash.lock().unwrap();
         let current_val = hash.entry(uid).or_default();
         let win = fastrand::bool();
+        let response;
 
         if win {
-            *current_val += 
+            *current_val += wager;
+            response =
+                format!("You won **{wager}** tokens! Your new balance is: **{current_val}**");
+        } else {
+            *current_val -= wager;
+            response =
+                format!("You lost **{wager}** tokens! Your new balance is: **{current_val}**");
         }
 
-        *current_val += reward;
-        (reward, *current_val)
+        response
     };
 
+    ctx.say(response).await?;
     Ok(())
 }
